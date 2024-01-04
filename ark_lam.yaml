@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: lam
+  name: lam
+spec:
+  containers:
+  - env:
+    # image: registry.access.redhat.com/ubi8/ubi:8.9
+    # image: nathanobert/ark_lam:fedora
+    image: docker.io/nathanobert/ark_lam:latest
+    # image: registry.redhat.io/rhel8/php-74
+    imagePullPolicy: Always
+    # command: ["/bin/sleep", "180d"]
+    name: lam
+    ports:
+    - containerPort: 8080
+      name: console
+      protocol: TCP
+  hostname: keycloak
+  imagePullSecrets:
+  - name: docker-io-nathanobert
+# - name: aws-arkcase-pull
+# - name: redhat-io-nathanobert
