@@ -17,11 +17,6 @@ FROM "${BASE_IMG}"
 ENV container oci
 ENV PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# CMD ["/bin/bash"]
-
-RUN rm -rf /var/log/* && \
-    mkdir -p /var/log/rhsm
-
 ENV \
     STI_SCRIPTS_URL=image:///usr/libexec/s2i \
     STI_SCRIPTS_PATH=/usr/libexec/s2i \
@@ -30,7 +25,10 @@ ENV \
     PATH=/opt/app-root/src/bin:/opt/app-root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     PLATFORM="el8"
 
-RUN INSTALL_PKGS="bsdtar \
+RUN \
+  rm -rf /var/log/* && \
+  mkdir -p /var/log/rhsm && \ 
+  INSTALL_PKGS="bsdtar \
   findutils \
   groff-base \
   glibc-locale-source \
@@ -51,16 +49,12 @@ RUN INSTALL_PKGS="bsdtar \
 WORKDIR ${HOME}
 
 ENTRYPOINT ["container-entrypoint"]
-# CMD ["base-usage"]
-
-RUN rpm-file-permissions && \
-    chown -R 1001:0 ${APP_ROOT}
-###### above ubi/ubi8
-###### below s2icore #####
 
 ENV    NODEJS_VER=20
 
-RUN yum -y module enable nodejs:$NODEJS_VER && \
+RUN rpm-file-permissions && \
+  chown -R 1001:0 ${APP_ROOT} && \ 
+  yum -y module enable nodejs:$NODEJS_VER && \
   INSTALL_PKGS="autoconf \
   automake \
   bzip2 \
@@ -90,11 +84,10 @@ RUN yum -y module enable nodejs:$NODEJS_VER && \
   node -v | grep -qe "^v$NODEJS_VER\." && echo "Found VERSION $NODEJS_VER" && \
   yum -y clean all --enablerepo='*'
 
-####### above s2core
-####### below rhel8/php-74
+####### above s2core (image)
+####### below rhel8/php-74 (image)
 
 EXPOSE 8080
-EXPOSE 8443
 
 ENV PHP_VERSION=7.4 \
     PHP_VER_SHORT=74 \
@@ -106,13 +99,12 @@ ARG INSTALL_PKGS="php php-mysqlnd php-pgsql php-bcmath \
                   php-process php-soap php-opcache php-xml \
                   php-gmp php-pecl-apcu php-pecl-zip mod_ssl hostname"
 
-RUN yum -y module enable php:$PHP_VERSION 
-RUN yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS 
-# RUN yum reinstall -y tzdata
-RUN yum install -y tzdata
-RUN rpm -V $INSTALL_PKGS
-RUN php -v | grep -qe "v$PHP_VERSION\." && echo "Found VERSION $PHP_VERSION"
-RUN yum -y clean all --enablerepo='*'
+RUN yum -y module enable php:$PHP_VERSION && \
+    yum install -y --setopt=tsflags=nodocs $INSTALL_PKGS && \
+    yum install -y tzdata && \
+    rpm -V $INSTALL_PKGS && \
+    php -v | grep -qe "v$PHP_VERSION\." && echo "Found VERSION $PHP_VERSION" && \
+    yum -y clean all --enablerepo='*'
 
 ENV PHP_CONTAINER_SCRIPTS_PATH=/usr/share/container-scripts/php/ \
     APP_DATA=${APP_ROOT}/src \
@@ -135,7 +127,8 @@ COPY ./s2i/bin/ $STI_SCRIPTS_PATH
 COPY ./root/ /
 
 COPY ldap-account-manager-8.6.RC1-0.fedora.1.noarch.rpm /tmp
-RUN dnf install /tmp/ldap-account-manager-8.6.RC1-0.fedora.1.noarch.rpm -y
+RUN dnf install /tmp/ldap-account-manager-8.6.RC1-0.fedora.1.noarch.rpm -y && \
+    rm /tmp/ldap-account-manager-8.6.RC1-0.fedora.1.noarch.rpm
 
 # php 8 magic
 RUN yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
